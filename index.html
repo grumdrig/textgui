@@ -19,14 +19,57 @@ function $(selector) { return document.querySelector(selector) }
 let canvas = $("canvas");
 let ctx = canvas.getContext("2d");
 
+class View {
+	constructor(l, t, w, h) {
+		this.left = l;
+		this.top = t;
+		this.width = w;
+		this.height = h;
+	}
+
+	x(i) { return canvas.MX + (this.left + i) * canvas.TX }
+	y(j) { return canvas.MY + (this.top  + j) * canvas.TY }
+	get w() { return this.width * canvas.TX }
+	get h() { return this.height * canvas.TY }
+	get x0() { return this.x(0) }
+	get y0() { return this.y(0) }
+	get x1() { return this.x(this.width) - 1 }
+	get y1() { return this.y(this.height) - 1 }
+
+	draw() {
+		if (this.backgroundColor) {
+			ctx.fillStyle = this.backgroundColor;
+			ctx.fillRect(this.x0, this.y0, this.w, this.h);
+		}
+		if (this.title) {
+			let tt = "☰ " + this.title;
+			ctx.fillStyle = this.color || "black";
+			for (let i = 0; i < tt.length; ++i) {
+				if (i >= this.width) break;
+				// console.log(this.title.charAt(i));
+				putc(tt.charAt(i), this.left + i, this.top);
+			}
+			ctx.fillRect(this.x0, this.y(1)+2, this.w, 1);
+		}
+	}
+
+}
+
+let VIEWS = [];
+
+let v = new View(10, 10, 10, 5);
+v.backgroundColor = randColor(0.8);
+v.title = "Window1";
+VIEWS.push(v);
+
+function putc(c, i, j, color) {
+	// ctx.fillStyle = color;
+	ctx.fillText(c, canvas.MX + i * canvas.TX, canvas.MY + (j+1) * canvas.TY);
+}
+
 function random(x, y, z) {
 	return Math.abs(Math.sin((x||0) * 8872.2831 + (y||0) * 1258.9823 + (z||0) * 5982.1225) * 89237.9578) % 1;
 }
-
-let alphabet = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
-alphabet += alphabet.toLowerCase();
-alphabet += "0123456789";
-alphabet += "~!@#$%^&*()-_=+[{]}|;:,<.>/?";
 
 function hsv2rgb(h, s, v) {
   var r, g, b;
@@ -67,10 +110,16 @@ function resize() {
 	canvas.TY = F;
 	canvas.NX = Math.floor(canvas.width / canvas.TX);
 	canvas.NY = Math.floor(canvas.height / canvas.TY);
+	canvas.MX = 2;
+	canvas.MY = 0;
 	draw();
 }
 
 function draw() {
+	let alphabet = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
+	alphabet += alphabet.toLowerCase();
+	alphabet += "0123456789";
+	alphabet += "~!@#$%^&*()-_=+[{]}|;:,<.>/?";
 	let now = +new Date();
 	ctx.clearRect(0, 0, canvas.width, canvas.height);
 	for (let i = 0; i < canvas.NX; ++i)
@@ -82,8 +131,12 @@ function draw() {
 			let v = Math.sin(now/-500 + (i + j) / 3) * 0.2 + 0.6;
 			ctx.fillStyle = rgb(hsv2rgb(random(i,j,291.2),random(i,j,959.4), v));
 			c = alphabet.charAt(Math.floor(alphabet.length * c));
-			ctx.fillText(c, 2 + i * canvas.TX, canvas.TY + j * canvas.TY);
+			putc(c, i, j);
 		}
+	}
+
+	for (v of VIEWS) {
+		v.draw();
 	}
 }
 
