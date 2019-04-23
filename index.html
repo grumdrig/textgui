@@ -61,12 +61,12 @@ function rgb(rgb) {
 function resize() {
 	canvas.width = window.innerWidth;
 	canvas.height = window.innerHeight;
-	canvas.TX = 11;
-	canvas.TY = 20;
+	let F = 20;
+	ctx.font = `${F}px Inconsolata, monospace`;
+	canvas.TX = ctx.measureText("X").width + 1;  // 11
+	canvas.TY = F;
 	canvas.NX = Math.floor(canvas.width / canvas.TX);
 	canvas.NY = Math.floor(canvas.height / canvas.TY);
-	ctx.font = "20px Inconsolata, monospace";
-	console.log(ctx.measureText("X"));
 	draw();
 }
 
