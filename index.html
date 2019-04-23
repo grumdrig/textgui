@@ -1,0 +1,101 @@
+<!doctype html>
+<html>
+<head><meta charset="utf-8"/>
+<title>TextGUI</title>
+<style>
+body {
+	background-color: black;
+	margin: 0;
+	overflow: hidden;
+}
+canvas {
+}
+</style>
+</head>
+<body>
+<canvas/>
+<script>
+function $(selector) { return document.querySelector(selector) }
+let canvas = $("canvas");
+let ctx = canvas.getContext("2d");
+
+function random(x, y, z) {
+	return Math.abs(Math.sin((x||0) * 8872.2831 + (y||0) * 1258.9823 + (z||0) * 5982.1225) * 89237.9578) % 1;
+}
+
+let alphabet = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
+alphabet += alphabet.toLowerCase();
+alphabet += "0123456789";
+alphabet += "~!@#$%^&*()-_=+[{]}|;:,<.>/?";
+
+function hsv2rgb(h, s, v) {
+  var r, g, b;
+
+  var i = Math.floor(h * 6);
+  var f = h * 6 - i;
+  var p = v * (1 - s);
+  var q = v * (1 - f * s);
+  var t = v * (1 - (1 - f) * s);
+
+  switch (i % 6) {
+    case 0: r = v, g = t, b = p; break;
+    case 1: r = q, g = v, b = p; break;
+    case 2: r = p, g = v, b = t; break;
+    case 3: r = p, g = q, b = v; break;
+    case 4: r = t, g = p, b = v; break;
+    case 5: r = v, g = p, b = q; break;
+  }
+
+  return [r,g,b].map(c => Math.floor(c * 256));
+}
+
+function randColor(v) {
+	let rgb = hsv2rgb(Math.random(), Math.random(), v);
+	return `rgb(${rgb.join(",")})`;
+}
+
+function rgb(rgb) {
+	return `rgb(${rgb.join(",")})`;
+}
+
+function resize() {
+	canvas.width = window.innerWidth;
+	canvas.height = window.innerHeight;
+	canvas.TX = 11;
+	canvas.TY = 20;
+	canvas.NX = Math.floor(canvas.width / canvas.TX);
+	canvas.NY = Math.floor(canvas.height / canvas.TY);
+	ctx.font = "20px Inconsolata, monospace";
+	console.log(ctx.measureText("X"));
+	draw();
+}
+
+function draw() {
+	let now = +new Date();
+	ctx.clearRect(0, 0, canvas.width, canvas.height);
+	for (let i = 0; i < canvas.NX; ++i)
+	for (let j = 0; j < canvas.NY; ++j) {
+		let c = random(i,j,821.91 + now/1e15);
+		if (c < 2/3) {
+			c *= 3/2;
+			// let v = ((i + j) % 20 < 10) ? 0.4 : 0.8;
+			let v = Math.sin(now/-500 + (i + j) / 3) * 0.2 + 0.6;
+			ctx.fillStyle = rgb(hsv2rgb(random(i,j,291.2),random(i,j,959.4), v));
+			c = alphabet.charAt(Math.floor(alphabet.length * c));
+			ctx.fillText(c, 2 + i * canvas.TX, canvas.TY + j * canvas.TY);
+		}
+	}
+}
+
+window.addEventListener("resize", resize);
+window.addEventListener("load", () => {
+	resize();
+	tick();
+});
+
+function tick() {
+	window.requestAnimationFrame(tick);
+	draw();
+}
+
+</script>
