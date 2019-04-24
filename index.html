@@ -19,6 +19,9 @@ function $(selector) { return document.querySelector(selector) }
 let canvas = $("canvas");
 let ctx = canvas.getContext("2d");
 
+function x(i) { return canvas.MX + i * canvas.TX }
+function y(j) { return canvas.MY + j * canvas.TY }
+
 class View {
 	constructor(l, t, w, h) {
 		this.left = l;
@@ -27,14 +30,14 @@ class View {
 		this.height = h;
 	}
 
-	x(i) { return canvas.MX + (this.left + i) * canvas.TX }
-	y(j) { return canvas.MY + (this.top  + j) * canvas.TY }
+	x(i) { return x(this.left + i) }
+	y(j) { return y(this.top  + j) }
 	get w() { return this.width * canvas.TX }
 	get h() { return this.height * canvas.TY }
 	get x0() { return this.x(0) }
 	get y0() { return this.y(0) }
-	get x1() { return this.x(this.width) - 1 }
-	get y1() { return this.y(this.height) - 1 }
+	get x1() { return this.x(this.width) - canvas.PX }
+	get y1() { return this.y(this.height) - canvas.PY }
 
 	draw() {
 		if (this.backgroundColor) {
@@ -45,11 +48,12 @@ class View {
 			let tt = "☰ " + this.title;
 			ctx.fillStyle = this.color || "black";
 			for (let i = 0; i < tt.length; ++i) {
-				if (i >= this.width) break;
+				if (i >= this.width - 1) break;
 				// console.log(this.title.charAt(i));
 				putc(tt.charAt(i), this.left + i, this.top);
 			}
-			ctx.fillRect(this.x0, this.y(1)+2, this.w, 1);
+			putc("×", this.left + this.width - 1, this.top);
+			ctx.fillRect(this.x0, this.y(1), this.w, canvas.PY);
 		}
 	}
 
@@ -57,14 +61,14 @@ class View {
 
 let VIEWS = [];
 
-let v = new View(10, 10, 10, 5);
+let v = new View(10, 10, 15, 8);
 v.backgroundColor = randColor(0.8);
-v.title = "Window1";
+v.title = "Window 3";
 VIEWS.push(v);
 
 function putc(c, i, j, color) {
 	// ctx.fillStyle = color;
-	ctx.fillText(c, canvas.MX + i * canvas.TX, canvas.MY + (j+1) * canvas.TY);
+	ctx.fillText(c, canvas.MX + i * canvas.TX, canvas.MY + (j+1) * canvas.TY - 3);
 }
 
 function random(x, y, z) {
@@ -106,11 +110,14 @@ function resize() {
 	canvas.height = window.innerHeight;
 	let F = 20;
 	ctx.font = `${F}px Inconsolata, monospace`;
-	canvas.TX = ctx.measureText("X").width + 1;  // 11
+	let W = canvas.TX = ctx.measureText("X").width + 1;  // 11
 	canvas.TY = F;
-	canvas.NX = Math.floor(canvas.width / canvas.TX);
-	canvas.NY = Math.floor(canvas.height / canvas.TY);
-	canvas.MX = 2;
+	canvas.NX = Math.floor(canvas.width  / W);
+	canvas.NY = Math.floor(canvas.height / F);
+	canvas.PX = 1;///W;
+	canvas.PY = 1;///F;
+	// ctx.scale(W, F);
+	canvas.MX = 2 * canvas.PX;
 	canvas.MY = 0;
 	draw();
 }
@@ -121,7 +128,27 @@ function draw() {
 	alphabet += "0123456789";
 	alphabet += "~!@#$%^&*()-_=+[{]}|;:,<.>/?";
 	let now = +new Date();
+
 	ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+	for (let i = 1; i < canvas.NX; ++i) {
+		let c = random(i,129.092,281.9929 + now/1e14);
+		if (c < 1/3) {
+			c *= 3/1;
+			ctx.fillStyle = rgb(hsv2rgb(c, (c * 10) % 1, 0.5));
+			ctx.fillRect(x(i), 0, 1, canvas.height);
+		}
+	}
+	for (let j = 1; j < canvas.NX; ++j) {
+		let c = random(182.11,j,158.2 + now/1e14);
+		if (c < 1/3) {
+			c *= 3/1;
+			ctx.fillStyle = rgb(hsv2rgb(c, (c * 10) % 1, 0.5));
+			ctx.fillRect(0,y(j), canvas.width, 1);
+		}
+	}
+	// for (let j = 0; j < canvas.NY; ++j) {
+
 	for (let i = 0; i < canvas.NX; ++i)
 	for (let j = 0; j < canvas.NY; ++j) {
 		let c = random(i,j,821.91 + now/1e15);
