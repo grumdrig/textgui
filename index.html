@@ -126,7 +126,7 @@ WINDOW.decorators.push(TEXT_WAVE);
 let view = new View(WINDOW).size(15, 8).position(10, 10);
 view.backgroundColor = randColor(0.8);
 makeTitle(view, "View 1");
-view.decorators.push(TEXT_WAVE);
+// view.decorators.push(TEXT_WAVE);
 
 function putc(c, i, j, color) {
 	// ctx.fillStyle = color;
@@ -197,4 +197,25 @@ function tick() {
 	draw();
 }
 
+</script>
+<script>
+// Cause the current web page to reload itself when changes occur on the
+// server side, assuming the server provides `last-modified` headers, and the
+// page isn't cached somewhere along the way. It works with `python -m
+// SimpleHTTPServer` at least.
+(function reloadWhenChanged() {
+	let r = new XMLHttpRequest();
+	r.onreadystatechange = () => {
+		if (r.readyState == r.DONE && r.status == 200) {
+			let lm = r.getResponseHeader("last-modified");
+			if (!window.L_M)
+				window.L_M = lm;
+			else if (window.L_M !== lm)
+				window.location.reload();
+			setTimeout(reloadWhenChanged, 1000);
+		}
+	};
+	r.open("HEAD", document.URL);
+	r.send();
+})();
 </script>
