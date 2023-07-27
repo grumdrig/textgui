@@ -23,6 +23,8 @@ function x(i) { return canvas.MX + i * canvas.TX }
 function y(j) { return canvas.MY + j * canvas.TY }
 
 class View {
+	mouseOver;
+
 	constructor(parent) {
 		this.left = 0;
 		this.top = 0;
@@ -96,6 +98,12 @@ let TEXT_WAVE = {
 		alphabet += "0123456789";
 		alphabet += "~!@#$%^&*()-_=+[{]}|;:,<.>/?";
 
+		if (view.mouseOver) {
+			ctx.strokeStyle = '#eee';
+			ctx.strokeRect(1 + canvas.MX + view.mouseOver.x * canvas.TX,
+				           1 + canvas.MY + view.mouseOver.y * canvas.TY, canvas.TX - 1, canvas.TY - 1);
+		}
+
 		let now = +new Date();
 		for (let i = 0; i < view.width; ++i)
 		for (let j = 0; j < view.height; ++j) {
@@ -129,7 +137,7 @@ makeTitle(view, "View 1");
 // view.decorators.push(TEXT_WAVE);
 
 function putc(c, i, j, color) {
-	// ctx.fillStyle = color;
+	if (color) ctx.fillStyle = color;
 	ctx.fillText(c, canvas.MX + i * canvas.TX, canvas.MY + (j+1) * canvas.TY - 3);
 }
 
@@ -190,6 +198,15 @@ window.addEventListener("resize", resize);
 window.addEventListener("load", () => {
 	resize();
 	tick();
+});
+
+canvas.addEventListener('mousemove', e => {
+	WINDOW.mouseOver = { x: Math.floor((e.clientX - canvas.MX) / canvas.TX),
+						 y: Math.floor((e.clientY - canvas.MY) / canvas.TY) };
+});
+
+canvas.addEventListener('mouseleave', e => {
+	WINDOW.mouseOver = null;
 });
 
 function tick() {
