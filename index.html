@@ -61,7 +61,7 @@ class View {
 	get x1() { return this.x(this.width) - 1 }
 	get y1() { return this.y(this.height) - 1 }
 
-	putc(c, i, j) { putc(c, this.i(i), this.j(j)) }
+	putc(c, i, j, color) { putc(c, this.i(i), this.j(j), color) }
 
 	draw() {
 		if (this.backgroundColor) {
@@ -78,6 +78,8 @@ class View {
 
 class Decor {
 	draw(view) {}
+	click(view, position) {}
+	drag(view, from, to) {}
 }
 
 class TitleDecor extends Decor {
@@ -104,7 +106,7 @@ class TextWave extends Decor {
 		alphabet += "0123456789";
 		alphabet += "~!@#$%^&*()-_=+[{]}|;:,<.>/?";
 
-		if (view.mouseOver) {
+		if (view.mouseOver && !view.mouseDown) {
 			ctx.strokeStyle = '#eee';
 			ctx.strokeRect(1 + canvas.MX + view.mouseOver.x * canvas.TX,
 				           1 + canvas.MY + view.mouseOver.y * canvas.TY, canvas.TX - 1, canvas.TY - 1);
@@ -113,6 +115,15 @@ class TextWave extends Decor {
 		let now = +new Date();
 		for (let i = 0; i < view.width; ++i)
 		for (let j = 0; j < view.height; ++j) {
+			if (view.mouseDown && view.mouseOver &&
+				(((view.mouseOver.x === i || view.mouseDown.x === i) &&
+				  (view.mouseDown.y <= j && j <= view.mouseOver.y)) ||
+				 ((view.mouseOver.y === j || view.mouseDown.y === j) &&
+				  (view.mouseDown.x <= i && i <= view.mouseOver.x)))) {
+				view.putc('+', i, j, 'white');
+				continue;
+			}
+
 			let c = random(i,j,821.91 + now/1e15);
 			if (c < 2/3) {
 				c *= 3/2;
@@ -120,8 +131,18 @@ class TextWave extends Decor {
 				let v = Math.sin(now/-500 + (i + j) / 3) * 0.2 + 0.6;
 				ctx.fillStyle = rgb(hsv2rgb(random(i,j,291.2),random(i,j,959.4), v));
 				c = alphabet.charAt(Math.floor(alphabet.length * c));
+
 				view.putc(c, i, j);
 			}
+		}
+	}
+
+	drag(view, from, to) {
+		if (to.x > from.x && to.y > from.y) {
+			let child = new View(view).position(from.x, from.y).size(1 + to.x - from.x,
+																	 1 + to.y - from.y);
+			child.backgroundColor = randColor(0.8);
+			makeTitle(child, 'Child');
 		}
 	}
 }
@@ -205,13 +226,32 @@ window.addEventListener("load", () => {
 	tick();
 });
 
-canvas.addEventListener('mousemove', e => {
+canvas.addEventListener('mousemove', mousemove);
+canvas.addEventListener('mousedown', mousemove);
+canvas.addEventListener('mouseup', mousemove);
+
+function mousemove(e) {
 	WINDOW.mouseOver = { x: Math.floor((e.clientX - canvas.MX) / canvas.TX),
 						 y: Math.floor((e.clientY - canvas.MY) / canvas.TY) };
-});
+	if (e.buttons && !WINDOW.mouseDown) {
+		WINDOW.mouseDown = {...WINDOW.mouseOver};
+	} else if (!e.buttons && WINDOW.mouseDown) {
+		if (WINDOW.mouseDown.x === WINDOW.mouseOver.x &&
+			WINDOW.mouseDown.y === WINDOW.mouseOver.y)
+		{
+			WINDOW.decorators.map(x => x.click(WINDOW, WINDOW.mouseDown) );
+		} else {
+			WINDOW.decorators.map(x => x.drag(WINDOW, WINDOW.mouseDown, WINDOW.mouseOver) );
+		}
+		WINDOW.mouseDown = null;
+	}
+}
+
+
 
 canvas.addEventListener('mouseleave', e => {
 	WINDOW.mouseOver = null;
+	WINDOW.mouseDown = null;
 });
 
 function tick() {
@@ -225,6 +265,7 @@ function tick() {
 // server side, assuming the server provides `last-modified` headers, and the
 // page isn't cached somewhere along the way. It works with `python -m
 // SimpleHTTPServer` at least.
+	/*
 (function reloadWhenChanged() {
 	let r = new XMLHttpRequest();
 	r.onreadystatechange = () => {
@@ -240,4 +281,5 @@ function tick() {
 	r.open("HEAD", document.URL);
 	r.send();
 })();
+*/
 </script>
