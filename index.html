@@ -76,8 +76,12 @@ class View {
 		this[attrib] : this.parent.cascade(attrib); }
 }
 
-let TITLE_DECOR = {
-	draw: view => {
+class Decor {
+	draw(view) {}
+}
+
+class TitleDecor extends Decor {
+	draw(view) {
 		if (view.title) {
 			ctx.fillStyle = view.cascade("color") || "black";
 			view.putc("☰", 0, 0);
@@ -89,10 +93,12 @@ let TITLE_DECOR = {
 			ctx.fillRect(view.x0, view.y(1), view.w, 1);
 		}
 	}
-};
+}
 
-let TEXT_WAVE = {
-	draw: view => {
+const TITLE_DECOR = new TitleDecor();
+
+class TextWave extends Decor {
+	draw(view) {
 		let alphabet = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
 		alphabet += alphabet.toLowerCase();
 		alphabet += "0123456789";
@@ -118,7 +124,7 @@ let TEXT_WAVE = {
 			}
 		}
 	}
-};
+}
 
 
 function makeTitle(parent, title) {
@@ -129,12 +135,11 @@ function makeTitle(parent, title) {
 }
 
 let WINDOW = new View();
-WINDOW.decorators.push(TEXT_WAVE);
+WINDOW.decorators.push(new TextWave());
 
 let view = new View(WINDOW).size(15, 8).position(10, 10);
 view.backgroundColor = randColor(0.8);
 makeTitle(view, "View 1");
-// view.decorators.push(TEXT_WAVE);
 
 function putc(c, i, j, color) {
 	if (color) ctx.fillStyle = color;
