@@ -80,6 +80,11 @@ class View {
 			this.parent.children = this.parent.children.filter(v => v !== this);
 		}
 	}
+
+	bringToFront() {
+		this.close();
+		this.parent.children.push(this);
+	}
 }
 
 class Decor {
@@ -104,9 +109,10 @@ class TitleDecor extends Decor {
 
 	click(view, position) {
 		if (view.parent && position.x === view.width - 1 && position.y === 0) {
+			// Close box clicked
 			view.parent.close();
 		} else {
-			console.log('click', position);
+			view.parent.bringToFront();
 		}
 	}
 }
@@ -294,7 +300,7 @@ function mousemove(e) {
 
 		let view = WINDOW;
 		while (true) {
-			let child = view.children.find(c =>
+			let child = view.children.findLast(c =>
 				c.left <= pos.x && pos.x < c.left + c.width &&
 				c.top  <= pos.y && pos.y < c.top  + c.height);
 			if (!child) break;
