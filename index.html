@@ -74,12 +74,18 @@ class View {
 
 	cascade(attrib) { return (!this.parent ||  typeof this[attrib] != "undefined") ?
 		this[attrib] : this.parent.cascade(attrib); }
+
+	close() {
+		if (this.parent) {
+			this.parent.children = this.parent.children.filter(v => v !== this);
+		}
+	}
 }
 
 class Decor {
 	draw(view) {}
 	click(view, position) {}
-	drag(view, from, to) {}
+	drop(view, from, to) {}
 }
 
 class TitleDecor extends Decor {
@@ -95,6 +101,19 @@ class TitleDecor extends Decor {
 			ctx.fillRect(view.x0, view.y(1), view.w, 1);
 		}
 	}
+
+	click(view, position) {
+		if (view.parent && position.x === view.width - 1 && position.y === 0) {
+			view.parent.close();
+		} else {
+			console.log('click', position);
+		}
+	}
+}
+
+function betw(a, v, b) {
+	return (a <= v && v <= b) ? 1 :
+	       (b <= v && v <= a) ? -1 : 0;
 }
 
 const TITLE_DECOR = new TitleDecor();
@@ -106,20 +125,22 @@ class TextWave extends Decor {
 		alphabet += "0123456789";
 		alphabet += "~!@#$%^&*()-_=+[{]}|;:,<.>/?";
 
-		if (view.mouseOver && !view.mouseDown) {
+		if (MOUSE.over === view && !MOUSE.capture) {
+			// draw a box under hovering mouse
 			ctx.strokeStyle = '#eee';
-			ctx.strokeRect(1 + canvas.MX + view.mouseOver.x * canvas.TX,
-				           1 + canvas.MY + view.mouseOver.y * canvas.TY, canvas.TX - 1, canvas.TY - 1);
+			ctx.strokeRect(1 + canvas.MX + MOUSE.position.x * canvas.TX,
+				           1 + canvas.MY + MOUSE.position.y * canvas.TY,
+				           canvas.TX - 1, canvas.TY - 1);
 		}
 
 		let now = +new Date();
 		for (let i = 0; i < view.width; ++i)
 		for (let j = 0; j < view.height; ++j) {
-			if (view.mouseDown && view.mouseOver &&
-				(((view.mouseOver.x === i || view.mouseDown.x === i) &&
-				  (view.mouseDown.y <= j && j <= view.mouseOver.y)) ||
-				 ((view.mouseOver.y === j || view.mouseDown.y === j) &&
-				  (view.mouseDown.x <= i && i <= view.mouseOver.x)))) {
+			if (MOUSE.capture === view &&
+				(((MOUSE.position.x === i || MOUSE.down.x === i) &&
+				  betw(MOUSE.down.y, j, MOUSE.position.y)) ||
+				 ((MOUSE.position.y === j || MOUSE.down.y === j) &&
+				  betw(MOUSE.down.x, i, MOUSE.position.x)))) {
 				view.putc('+', i, j, 'white');
 				continue;
 			}
@@ -137,7 +158,7 @@ class TextWave extends Decor {
 		}
 	}
 
-	drag(view, from, to) {
+	drop(view, from, to) {
 		if (to.x > from.x && to.y > from.y) {
 			let child = new View(view).position(from.x, from.y).size(1 + to.x - from.x,
 																	 1 + to.y - from.y);
@@ -230,28 +251,78 @@ canvas.addEventListener('mousemove', mousemove);
 canvas.addEventListener('mousedown', mousemove);
 canvas.addEventListener('mouseup', mousemove);
 
+
+let MOUSE = {
+	capture: null,  // a view
+	over: null,     // a view
+	down: null,     // coordinates relative to capture (if button is down)
+	position: null, // coordinates relative to over (if over the window)
+};
+
+
 function mousemove(e) {
-	WINDOW.mouseOver = { x: Math.floor((e.clientX - canvas.MX) / canvas.TX),
-						 y: Math.floor((e.clientY - canvas.MY) / canvas.TY) };
-	if (e.buttons && !WINDOW.mouseDown) {
-		WINDOW.mouseDown = {...WINDOW.mouseOver};
-	} else if (!e.buttons && WINDOW.mouseDown) {
-		if (WINDOW.mouseDown.x === WINDOW.mouseOver.x &&
-			WINDOW.mouseDown.y === WINDOW.mouseOver.y)
-		{
-			WINDOW.decorators.map(x => x.click(WINDOW, WINDOW.mouseDown) );
-		} else {
-			WINDOW.decorators.map(x => x.drag(WINDOW, WINDOW.mouseDown, WINDOW.mouseOver) );
+	let pos = { x: Math.floor((e.clientX - canvas.MX) / canvas.TX),
+				y: Math.floor((e.clientY - canvas.MY) / canvas.TY) };
+
+	if (MOUSE.capture) {
+		for (let view = MOUSE.capture; view.parent; view = view.parent) {
+			pos.x -= view.left;
+			pos.y -= view.top;
 		}
-		WINDOW.mouseDown = null;
+
+		let view = MOUSE.capture;
+		MOUSE.position = pos;
+
+		if (e.buttons) {
+			// mouse drag in progress
+			// could send a hover event here
+		} else {
+			// mouse release
+			if (MOUSE.down.x === MOUSE.position.x &&
+				MOUSE.down.y === MOUSE.position.y)
+			{
+				// console.log('click', view);
+				view.decorators.map(x => x.click(view, MOUSE.down) );
+			} else {
+				view.decorators.map(x => x.drop(view, MOUSE.down, MOUSE.position) );
+			}
+			MOUSE.down = null;
+			MOUSE.capture = null;
+		}
+
+	} else {
+
+		let view = WINDOW;
+		while (true) {
+			let child = view.children.find(c =>
+				c.left <= pos.x && pos.x < c.left + c.width &&
+				c.top  <= pos.y && pos.y < c.top  + c.height);
+			if (!child) break;
+			pos.x -= child.left;
+			pos.y -= child.top;
+			view = child;
+		}
+
+		MOUSE.over = view;
+		MOUSE.position = pos;
+
+		if (e.buttons) {
+			// mouse down
+			MOUSE.capture = view;
+			MOUSE.down = {...pos};
+		}
 	}
 }
 
 
 
 canvas.addEventListener('mouseleave', e => {
-	WINDOW.mouseOver = null;
-	WINDOW.mouseDown = null;
+	if (MOUSE.capture) {
+		MOUSE.down = null;
+		MOUSE.capture = null;
+	}
+	MOUSE.position = null;
+	MOUSE.over = null;
 });
 
 function tick() {
