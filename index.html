@@ -89,7 +89,9 @@ class View {
 
 class Decor {
 	draw(view) {}
+	down(view, position) {}
 	click(view, position) {}
+	drag(view, from, to) {}
 	drop(view, from, to) {}
 }
 
@@ -107,12 +109,19 @@ class TitleDecor extends Decor {
 		}
 	}
 
+	down(view, position) {
+		view.parent.bringToFront();
+	}
+
+	drag(view, from, to) {
+		view.parent.left += to.x - from.x;
+		view.parent.top += to.y - from.y;
+	}
+
 	click(view, position) {
 		if (view.parent && position.x === view.width - 1 && position.y === 0) {
 			// Close box clicked
 			view.parent.close();
-		} else {
-			view.parent.bringToFront();
 		}
 	}
 }
@@ -281,7 +290,10 @@ function mousemove(e) {
 
 		if (e.buttons) {
 			// mouse drag in progress
-			// could send a hover event here
+			if (MOUSE.position.x != MOUSE.down.x ||
+				MOUSE.position.y != MOUSE.down.y) {
+				view.decorators.map(x => x.drag(view, MOUSE.down, MOUSE.position) );
+			}
 		} else {
 			// mouse release
 			if (MOUSE.down.x === MOUSE.position.x &&
@@ -316,6 +328,7 @@ function mousemove(e) {
 			// mouse down
 			MOUSE.capture = view;
 			MOUSE.down = {...pos};
+			view.decorators.map(x => x.down(view, pos) );
 		}
 	}
 }
