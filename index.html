@@ -23,19 +23,17 @@ function x(i) { return canvas.MX + i * canvas.TX }
 function y(j) { return canvas.MY + j * canvas.TY }
 
 class View {
-	mouseOver;
+	left = 0;
+	top = 0;
+	width = 10;
+	height = 4;
+	parent;
+	children = [];
+	decorators = [];
 
 	constructor(parent) {
-		this.left = 0;
-		this.top = 0;
-		this.width = 10;
-		this.height = 4;
-
 		this.parent = parent;
-		this.children = [];
 		if (parent) parent.children.push(this);
-
-		this.decorators = [];
 	}
 
 	position(i, j) {
@@ -94,6 +92,14 @@ class Decor {
 	drag(view, from, to) {}
 	drop(view, from, to) {}
 }
+
+class WndDecor extends Decor {
+	down(view, position) {
+		view.bringToFront();
+	}
+}
+
+const WND_DECOR = new WndDecor();
 
 class TitleDecor extends Decor {
 	draw(view) {
@@ -177,26 +183,31 @@ class TextWave extends Decor {
 		if (to.x > from.x && to.y > from.y) {
 			let child = new View(view).position(from.x, from.y).size(1 + to.x - from.x,
 																	 1 + to.y - from.y);
-			child.backgroundColor = randColor(0.8);
-			makeTitle(child, 'Child');
+			prepWindow(child);
 		}
 	}
 }
 
 
-function makeTitle(parent, title) {
-	let titlebar = new View(parent).size(parent.width, 1);
+function prepWindow(wnd, title) {
+	wnd.decorators.push(WND_DECOR);
+	wnd.backgroundColor = randColor(0.8);
+
+	let titlebar = new View(wnd).size(wnd.width, 1);
+	if (!title) {
+		DESKTOP.hwnd = (DESKTOP.hwnd ?? 0) + 1;
+		title = 'View ' + DESKTOP.hwnd;
+	}
 	titlebar.title = title;
 	titlebar.decorators.push(TITLE_DECOR);
 	titlebar.backgroundColor = "blue";
 }
 
-let WINDOW = new View();
-WINDOW.decorators.push(new TextWave());
+let DESKTOP = new View();
+DESKTOP.decorators.push(new TextWave());
 
-let view = new View(WINDOW).size(15, 8).position(10, 10);
-view.backgroundColor = randColor(0.8);
-makeTitle(view, "View 1");
+let view = new View(DESKTOP).size(15, 8).position(10, 10);
+prepWindow(view);
 
 function putc(c, i, j, color) {
 	if (color) ctx.fillStyle = color;
@@ -246,14 +257,14 @@ function resize() {
 	canvas.TY = F;
 	canvas.MX = 2;
 	canvas.MY = 0;
-	WINDOW.width  = Math.floor(canvas.width  / W);;
-	WINDOW.height = Math.floor(canvas.height / F);
+	DESKTOP.width  = Math.floor(canvas.width  / W);;
+	DESKTOP.height = Math.floor(canvas.height / F);
 	draw();
 }
 
 function draw() {
 	ctx.clearRect(0, 0, canvas.width, canvas.height);
-	WINDOW.draw();
+	DESKTOP.draw();
 }
 
 window.addEventListener("resize", resize);
@@ -310,7 +321,7 @@ function mousemove(e) {
 
 	} else {
 
-		let view = WINDOW;
+		let view = DESKTOP;
 		while (true) {
 			let child = view.children.findLast(c =>
 				c.left <= pos.x && pos.x < c.left + c.width &&
